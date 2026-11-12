@@ -22,5 +22,5 @@ Alle Buchstaben-PNGs haben dieselbe Höhe und dieselbe Grundlinie, damit sie sic
 ## Hinweise
 
 - Die Handschrift wird im Browser gespeichert (localStorage). Safari und die Home-Bildschirm-App haben getrennte Speicher. Mit „Handschrift sichern" bzw. „Handschrift laden" kannst du sie übertragen.
-- Ein direkter `.goodnotes`-Export ist nicht enthalten. Das Format ist nicht dokumentiert und lässt sich ohne GoodNotes nicht prüfen.
-- Dateien: `index.html`, `style.css`, `app.js` (Aufnahme, Rendering, Export), `zip.js` (kleiner ZIP-Writer).
+- **`.goodnotes`-Export (experimentell):** Button „.goodnotes erzeugen". Das Format ist nicht offiziell dokumentiert. `goodnotes.js` baut die Datei nach dem Muster einer echten GoodNotes-Datei (`goodnotes-template.js`): Seite 2 enthält jeden Buchstaben (oder jedes Wort) als eigenes Bildobjekt. Die Datei wurde strukturell gegen die Vorlage geprüft, aber noch nicht in GoodNotes selbst geöffnet. Öffnet sie sich nicht, den PNG-Export benutzen.
+- Dateien: `index.html`, `style.css`, `app.js` (Aufnahme, Rendering, Export), `zip.js` (kleiner ZIP-Writer), `goodnotes.js` + `goodnotes-template.js` (`.goodnotes`-Writer und Vorlage).

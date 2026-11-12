@@ -96,7 +96,23 @@
   <div id="previewWrap" class="previewwrap"><canvas id="preview"></canvas></div>
 
   <details class="panel" open>
-    <summary>Export für GoodNotes</summary>
+    <summary>GoodNotes-Datei (.goodnotes) – experimentell</summary>
+    <p class="muted">Erzeugt ein Notizbuch, in dem jeder Buchstabe (oder jedes Wort) ein eigenes Bildobjekt auf Seite 2 ist. Aufgebaut nach einer echten GoodNotes-Datei, aber ungetestet: Falls GoodNotes die Datei nicht öffnet, bitte den PNG-Export darunter benutzen.</p>
+    <label>Schriftgröße in GoodNotes <output data-val="gnSize"></output>
+      <input type="range" data-set="gnSize" min="20" max="120" step="1">
+    </label>
+    <div class="row">
+      <button id="btnGn" type="button" class="primary">.goodnotes erzeugen</button>
+    </div>
+    <div id="gnStatus" class="muted"></div>
+    <div id="gnActions" class="row" hidden>
+      <button id="btnGnShare" type="button" class="primary">Teilen / In GoodNotes öffnen</button>
+      <button id="btnGnDownload" type="button">Herunterladen</button>
+    </div>
+  </details>
+
+  <details class="panel" open>
+    <summary>Export als PNGs für GoodNotes</summary>
     <p class="muted">Jedes Teil wird ein eigenes transparentes PNG. In GoodNotes ist jedes PNG ein eigenes Objekt, das du mit dem Lasso oder durch Antippen einzeln verschieben kannst.</p>
     <label>Einzelteile
       <select data-set="unit">
@@ -119,6 +135,8 @@
 </main>
 
 <script src="zip.js"></script>
+<script src="goodnotes-template.js"></script>
+<script src="goodnotes.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

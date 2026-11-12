@@ -17,7 +17,7 @@
 
   var DEFAULTS = {
     pen: 0.02, color: '#1b2a6b', target: 3, auto: true,
-    size: 90, jitter: 50, spacing: 0.05, lineHeight: 0.85, unit: 'letter',
+    size: 90, gnSize: 48, jitter: 50, spacing: 0.05, lineHeight: 0.85, unit: 'letter',
     text: 'Hallo Welt!\nSo sieht meine Handschrift aus. 0123456789'
   };
 
@@ -401,6 +401,8 @@
         var wx = 0, items = [];
         insts.forEach(function (inst) {
           if (x > 0 && x + inst.w > maxW) newLine();
+          inst.line = lines.length;   // Zeilenindex und x-Position für den Seitenexport
+          inst.lx = x;
           line.push({ inst: inst, x: x });
           letters.push(inst);
           items.push({ inst: inst, x: wx });
@@ -471,8 +473,11 @@
     return s || 'wort';
   }
 
+  var PADX = 0.06, PADY = 0.04;   // Rand um jedes exportierte Teil, in em
+
+  // liefert { blob, w, h } (Pixelmaße des PNG)
   function renderUnit(items, o) {
-    var EM = EXPORT_EM, padX = 0.06, padY = 0.04;
+    var EM = EXPORT_EM, padX = PADX, padY = PADY;
     var minX = Infinity, maxX = -Infinity;
     items.forEach(function (it) {
       minX = Math.min(minX, it.x);
@@ -485,7 +490,9 @@
     items.forEach(function (it) {
       drawStrokes(ctx, it.inst.strokes, (it.x - minX + padX) * EM, padY * EM, EM, o.color, o.pen, it.inst.lw);
     });
-    return new Promise(function (res) { cv.toBlob(res, 'image/png'); });
+    return new Promise(function (res) {
+      cv.toBlob(function (blob) { res({ blob: blob, w: cv.width, h: cv.height }); }, 'image/png');
+    });
   }
 
   function clearParts() {
@@ -510,7 +517,7 @@
     var box = $('parts');
     for (var i = 0; i < units.length; i++) {
       $('partsStatus').textContent = 'Erzeuge ' + (i + 1) + ' von ' + units.length + ' …';
-      var blob = await renderUnit(units[i], o);
+      var blob = (await renderUnit(units[i], o)).blob;
       var name = String(i + 1).padStart(3, '0') + '_' + partLabel(unit, units[i]) + '.png';
       var url = URL.createObjectURL(blob);
       parts.push({ name: name, blob: blob, url: url });
@@ -552,6 +559,85 @@
     }
   }
 
+  /* ---------- .goodnotes (experimentell) ---------- */
+  var gnFile = null;   // zuletzt erzeugte Datei { blob, name }
+
+  async function exportGoodnotes() {
+    var status = $('gnStatus');
+    var btn = $('btnGn');
+    $('gnActions').hidden = true;
+    gnFile = null;
+    if (typeof buildGoodnotes !== 'function' || !globalThis.GN_TEMPLATE) { status.textContent = 'GoodNotes-Modul nicht geladen.'; return; }
+    btn.disabled = true;
+    try {
+      var o = currentOpts();
+      var P = globalThis.GN_PAGE;
+      var areaW = P.right - P.left, areaH = P.bottom - P.top;
+      var lh = settings.lineHeight;
+      var size = settings.gnSize, L, shrunk = false;
+      for (;;) {
+        L = layout(settings.text, o, areaW / size);
+        var needH = (L.lines.length - 1) * lh * size + size;
+        if (needH <= areaH || size <= 16) break;
+        size *= 0.93; shrunk = true;
+      }
+      var units = settings.unit === 'word'
+        ? L.words.map(function (items) { return { items: items, line: items[0].inst.line, lx: items[0].inst.lx }; })
+        : L.letters.map(function (inst) { return { items: [{ inst: inst, x: 0 }], line: inst.line, lx: inst.lx }; });
+      if (!units.length) { status.textContent = 'Nichts zu exportieren. Nimm zuerst Zeichen auf oder gib Text ein.'; return; }
+
+      var images = [];
+      for (var i = 0; i < units.length; i++) {
+        status.textContent = 'Erzeuge ' + (i + 1) + ' von ' + units.length + ' …';
+        var u = units[i];
+        var r = await renderUnit(u.items, o);
+        images.push({
+          png: new Uint8Array(await r.blob.arrayBuffer()),
+          x: P.left + (u.lx - PADX) * size,
+          y: P.top + u.line * lh * size - PADY * size,
+          w: r.w * size / EXPORT_EM,
+          h: r.h * size / EXPORT_EM
+        });
+        if (i % 10 === 9) await new Promise(function (r2) { setTimeout(r2, 0); });
+      }
+
+      // Vorschaubild der Seite
+      var tw = 386, th = 499, s = tw / P.w;
+      var tc = document.createElement('canvas');
+      tc.width = tw; tc.height = th;
+      var tctx = tc.getContext('2d');
+      tctx.fillStyle = '#fff';
+      tctx.fillRect(0, 0, tw, th);
+      L.lines.forEach(function (ln, li) {
+        ln.forEach(function (it) {
+          drawStrokes(tctx, it.inst.strokes, (P.left + it.x * size) * s, (P.top + li * lh * size) * s, size * s, o.color, o.pen, it.inst.lw);
+        });
+      });
+      var thumb = new Uint8Array(await new Promise(function (res) { tc.toBlob(res, 'image/jpeg', 0.85); }).then(function (b) { return b.arrayBuffer(); }));
+
+      var data = buildGoodnotes(images, thumb);
+      gnFile = { blob: new Blob([data], { type: 'application/octet-stream' }), name: 'handschrift.goodnotes' };
+      status.textContent = units.length + ' Bildobjekte auf Seite 2' + (shrunk ? ' (Schrift automatisch verkleinert, damit alles auf die Seite passt)' : '') + '. Datei bereit.';
+      $('gnActions').hidden = false;
+    } catch (err) {
+      status.textContent = 'Fehler: ' + (err && err.message ? err.message : err);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  $('btnGn').addEventListener('click', exportGoodnotes);
+  $('btnGnDownload').addEventListener('click', function () { if (gnFile) download(gnFile.blob, gnFile.name); });
+  $('btnGnShare').addEventListener('click', async function () {
+    if (!gnFile) return;
+    var f = new File([gnFile.blob], gnFile.name, { type: 'application/octet-stream' });
+    if (navigator.canShare && navigator.canShare({ files: [f] }) && navigator.share) {
+      try { await navigator.share({ files: [f] }); } catch (e) { /* abgebrochen */ }
+    } else {
+      download(gnFile.blob, gnFile.name);
+    }
+  });
+
   $('btnParts').addEventListener('click', buildParts);
   $('btnZip').addEventListener('click', downloadZip);
   $('btnShare').addEventListener('click', shareParts);
@@ -562,6 +648,7 @@
     if (k === 'pen') return (Math.round(v * 1000) / 1000).toString();
     if (k === 'jitter') return v + ' %';
     if (k === 'size') return v + ' px';
+    if (k === 'gnSize') return v + ' pt';
     return (Math.round(v * 100) / 100).toString();
   }
 
