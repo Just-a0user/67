@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Handschrift">
+<meta name="theme-color" content="#1b2a6b">
+<title>Text zu Handschrift</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <h1>Text zu Handschrift</h1>
+  <nav>
+    <button id="tabWrite" class="tab active" type="button">1 · Schrift aufnehmen</button>
+    <button id="tabText" class="tab" type="button">2 · Text &amp; Export</button>
+  </nav>
+</header>
+
+<main>
+
+<!-- ============ 1. Schrift aufnehmen ============ -->
+<section id="viewWrite">
+  <p class="hint">Wähle ein Zeichen und schreib es mit dem Apple Pencil in das Feld. Speichere pro Zeichen am besten 3 oder mehr Varianten, dann sieht kein Buchstabe aus wie der andere.</p>
+
+  <div id="progress" class="progress"></div>
+  <div id="charGrid" class="chargrid"></div>
+
+  <div class="padhead">
+    <strong>Zeichen: <span id="curChar" class="curchar"></span></strong>
+    <span id="curCount" class="muted"></span>
+  </div>
+  <div id="padWrap" class="padwrap"><canvas id="pad"></canvas></div>
+
+  <div class="row">
+    <button id="btnUndo" type="button">↶ Strich zurück</button>
+    <button id="btnClear" type="button">Leeren</button>
+    <button id="btnSave" type="button" class="primary">Als Variante speichern</button>
+  </div>
+
+  <div id="variants" class="variants"></div>
+
+  <details class="panel" open>
+    <summary>Stift &amp; Aufnahme</summary>
+    <label>Stiftdicke <output data-val="pen"></output>
+      <input type="range" data-set="pen" min="0.008" max="0.05" step="0.001">
+    </label>
+    <label>Farbe
+      <input type="color" data-set="color">
+    </label>
+    <label>Ziel: Varianten pro Zeichen
+      <input type="number" data-set="target" min="1" max="10" step="1">
+    </label>
+    <label class="check">
+      <input type="checkbox" data-set="auto"> Nach Erreichen des Ziels automatisch zum nächsten Zeichen
+    </label>
+  </details>
+
+  <details class="panel">
+    <summary>Sicherung der Handschrift</summary>
+    <p class="muted">Die Handschrift liegt nur in diesem Browser. Der Safari-Tab und die Home-Bildschirm-App haben getrennten Speicher, darum hier sichern oder übertragen.</p>
+    <div class="row">
+      <button id="btnBackup" type="button">Handschrift sichern (.json)</button>
+      <label class="filebtn">Handschrift laden<input id="fileRestore" type="file" accept="application/json,.json" hidden></label>
+      <button id="btnWipe" type="button" class="danger">Alles löschen</button>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 2. Text & Export ============ -->
+<section id="viewText" hidden>
+  <textarea id="txt" data-set="text" rows="5" spellcheck="false" placeholder="Text hier einfügen"></textarea>
+  <div id="missing" class="warn" hidden></div>
+
+  <details class="panel" open>
+    <summary>Aussehen</summary>
+    <label>Schriftgröße (Vorschau) <output data-val="size"></output>
+      <input type="range" data-set="size" min="50" max="200" step="1">
+    </label>
+    <label>Variation <output data-val="jitter"></output>
+      <input type="range" data-set="jitter" min="0" max="100" step="1">
+    </label>
+    <label>Buchstabenabstand <output data-val="spacing"></output>
+      <input type="range" data-set="spacing" min="-0.05" max="0.3" step="0.005">
+    </label>
+    <label>Zeilenabstand <output data-val="lineHeight"></output>
+      <input type="range" data-set="lineHeight" min="0.6" max="1.4" step="0.01">
+    </label>
+    <div class="row">
+      <button id="btnReroll" type="button">🎲 Neu würfeln</button>
+    </div>
+  </details>
+
+  <div id="previewWrap" class="previewwrap"><canvas id="preview"></canvas></div>
+
+  <details class="panel" open>
+    <summary>Export für GoodNotes</summary>
+    <p class="muted">Jedes Teil wird ein eigenes transparentes PNG. In GoodNotes ist jedes PNG ein eigenes Objekt, das du mit dem Lasso oder durch Antippen einzeln verschieben kannst.</p>
+    <label>Einzelteile
+      <select data-set="unit">
+        <option value="letter">Jeder Buchstabe einzeln</option>
+        <option value="word">Jedes Wort einzeln</option>
+      </select>
+    </label>
+    <div class="row">
+      <button id="btnParts" type="button" class="primary">Einzelteile erzeugen</button>
+    </div>
+    <div id="partsStatus" class="muted"></div>
+    <div id="partsActions" class="row" hidden>
+      <button id="btnShare" type="button" class="primary">Teilen / In Fotos sichern</button>
+      <button id="btnZip" type="button">ZIP herunterladen</button>
+    </div>
+    <div id="parts" class="parts"></div>
+  </details>
+</section>
+
+</main>
+
+<script src="zip.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
